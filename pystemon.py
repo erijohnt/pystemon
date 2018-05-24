@@ -1009,7 +1009,7 @@ if __name__ == "__main__":
         logger.setLevel(logging.INFO)
 
     if not options.daemon:
-        formatter = logging.Formatter('[%(asctime)s] %(message)s')
+        formatter = logging.Formatter('[%(levelname)-7s] %(message)s')
         hdlr = logging.StreamHandler(sys.stdout)
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
