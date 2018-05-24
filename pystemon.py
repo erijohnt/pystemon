@@ -24,6 +24,7 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.MIMEText import MIMEText
 from email import Encoders
+from httplib import BadStatusLine
 import gzip
 import hashlib
 import json
@@ -788,6 +789,14 @@ def download_url(url, data=None, cookie=None, loop_client=0, loop_server=0):
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
             return download_url(url, loop_server=loop_server)
         return None, None
+    except BadStatusLine:
+        failed_proxy(random_proxy)
+        errstr = "Failed to download the page because of bad HTTP status code from " \
+                 + "{0} trying again.".format(url)
+        logger.warning(errstr)
+        loop_server += 1
+        logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+        return download_url(url, loop_server=loop_server)
     except Exception as e:
         failed_proxy(random_proxy)
         logger.warning("Failed to download the page because of other HTTPlib error proxy error {0} trying again.".format(url))
