@@ -403,7 +403,7 @@ class PastiePasteSiteCom(Pastie):
     def fetch_pastie(self):
         validation_form_page, headers = download_url(self.url)
         if validation_form_page:
-            htmlDom = BeautifulSoup(validation_form_page)
+            htmlDom = BeautifulSoup(validation_form_page, "html.parser")
             if not htmlDom:
                 return self.pastie_content
             content_left = htmlDom.find(id='full-width')
@@ -431,7 +431,7 @@ class PastieSlexyOrg(Pastie):
     def fetch_pastie(self):
         validation_form_page, headers = download_url(self.url)
         if validation_form_page:
-            htmlDom = BeautifulSoup(validation_form_page)
+            htmlDom = BeautifulSoup(validation_form_page, "html.parser")
             if not htmlDom:
                 return self.pastie_content
             a = htmlDom.find('a', {'target': '_blank'})
@@ -476,7 +476,7 @@ class PastieSniptNet(Pastie):
     def fetch_pastie(self):
         downloaded_page, headers = download_url(self.url)
         if downloaded_page:
-            htmlDom = BeautifulSoup(downloaded_page)
+            htmlDom = BeautifulSoup(downloaded_page, "html.parser")
             # search for <textarea class="raw">
             textarea = htmlDom.find('textarea', {'class': 'raw'})
             if textarea and textarea.contents:
