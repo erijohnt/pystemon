@@ -64,9 +64,13 @@ logger.info('exiting')
 logger.info('signal received! Sending kill to threads ...')
 logger.info(msg)
 logger.warning("!!Proxy error on {0}.".format(url))
+    logstr = '{site:<15s} | PROXY ERROR'.format(site=url)
 
 logger.warning("404 from proxy received for {url}. Waiting 1 minute".format(url=url))
+    logstr = '{site:<15s} | HTTP 404: Not Found | Retrying in 1 minute'.format(site=url)
+
 logger.warning("500 from proxy received for {url}. Waiting 1 minute".format(url=url))
+    logstr = '{site:<15s} | HTTP 500: Internal Server Error | Retrying in 1 minute'.format(site=url)
 logger.warning("502 from proxy received for {url}. Waiting 1 minute".format(url=url))
 logger.warning("504 from proxy received for {url}. Waiting 1 minute".format(url=url))
 logger.warning("ERROR: HTTP Error ##### {e} ######################## {url}".format(e=e, url=url))
