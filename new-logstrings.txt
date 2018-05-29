@@ -1,0 +1,81 @@
+logger.debug('State of Database for pastie {site} {id} - {state}'.format(site=pastie.site.name, id=pastie.id, state=pastie_in_db))
+global logger
+logger = logging.getLogger('pystemon')
+logger.addHandler(hdlr)
+logger.debug(
+logger.debug("ERROR: URL Error ##### {e} ######################## ".format(e=e, url=url))
+logger.debug("ERROR: timeout ############################# " + url)
+logger.debug("Queue {name} size: {size}".format(
+logger.debug("Using default IP address")
+logger.debug('Added pastie {site} {id} in the SQLite database.'.format(site=pastie.site.name, id=pastie.id))
+logger.debug('Found {count} UserAgents in file "{file}"'.format(file=filename, count=len(user_agents_list)))
+logger.debug('Found {count} proxies in file "{file}"'.format(file=filename, count=len(proxies_list)))
+logger.debug('Pastie {site} {id} has md5: "{md5}"'.format(site=self.site.name, id=self.id, md5=self.md5))
+logger.debug('Proxy configuration file changed. Reloading proxy list.')
+logger.debug('Updated pastie {site} {id} in the SQLite database.'.format(site=pastie.site.name, id=pastie.id))
+logger.debug(traceback.format_exc())
+logger.error("ERROR: Other HTTPlib error: {e}".format(e=e))
+logger.error("ERROR: unable to send email. Are your email setting correct?: {e}".format(e=e))
+logger.error("ERROR: unable to send email: {0}".format(e))
+logger.error("Error in configuration file:")
+
+logger.error("No last pasties matches for regular expression site:{site} regex:{regex}. Error in your regex? Dumping htmlPage \n {html}".format(site=self.name, regex=self.archive_regex, html=htmlPage.encode('utf8')))
+    '{site:<15s} | No paste link matches for your regex: [{regex}]. Dumping page HTML.\n{html}'
+    format(site=self.name, regex=self.archive_regex, html=htmlPage.encode('utf8'))
+
+logger.error("Thread for SQLite crashed unexpectectly, recovering...: {e}".format(e=e))
+logger.error("error position: (%s:%s)" % (mark.line + 1, mark.column + 1))
+logger.error('Cannot add pastie {site} {id} in the SQLite database: {error}'.format(site=pastie.site.name, id=pastie.id, error=e))
+
+logger.error('Configuration problem: proxyfile "{file}" not found or not readable: {e}'.format(file=filename, e=e))
+    'CONFIG | "{file}" proxyfile unreadable/not found: {e}'
+    format(file=filename, e=e)
+
+logger.error('Configuration problem: user-agent-file "{file}" not found or not readable: {e}'.format(file=filename, e=e))
+    'CONFIG | "{file}" user-agent flie unreadable/not found: {e}'
+    format(file=filename, e=e)
+
+logger.error('Pastie {site} {id} md5 problem: {e}'.format(site=self.site.name, id=self.id, e=e))
+logger.error('Problem with the SQLite database {0}: {1}'.format(self.filename, e))
+
+logger.error('Unable to fork, can\'t run as daemon. Error: {id} {error}'.format(id=error.errno, error=error.strerror))
+    'DAEMON | Fork failed. Cannot run as daemon, error: {id} {error}'
+    format(id=errno.errno, error=error.strerror)
+
+logger.error(msg)
+logger.error(traceback.format_exc())
+
+logger.info('Downloading list of new pastes from {name}. Will check again in {time} seconds'.format(name=self.name, time=sleep_time))
+    '{site:<15s} | {time}s to next recheck | Downloading new paste list'
+                     
+logger.info("Found {amount} new pasties for site {site}. There are now {qsize} pasties to be downloaded.".format(amount=len(last_pasties),
+    '{site:<15s} | {amt:<3d} new pastes | {qsize:<3d} queued pastes'
+    format(amount=len(last_pasties), 
+
+logger.info("Proxies left: {0}".format(len(proxies_list)))
+logger.info("Removing proxy {0} from proxy list because of to many errors errors.".format(proxy))
+logger.info('Starting up ...')
+logger.info('Thread for Pastiesite {} started'.format(self.name))
+    logstr = '{site:<15s} | THREAD STARTED'.format(site=self.name)
+
+logger.info('Thread for Sqlite3Database started')
+logger.info('ThreadProxyList started')
+logger.info('exiting')
+logger.info('signal received! Sending kill to threads ...')
+logger.info(msg)
+logger.warning("!!Proxy error on {0}.".format(url))
+
+logger.warning("404 from proxy received for {url}. Waiting 1 minute".format(url=url))
+logger.warning("500 from proxy received for {url}. Waiting 1 minute".format(url=url))
+logger.warning("502 from proxy received for {url}. Waiting 1 minute".format(url=url))
+logger.warning("504 from proxy received for {url}. Waiting 1 minute".format(url=url))
+logger.warning("ERROR: HTTP Error ##### {e} ######################## {url}".format(e=e, url=url))
+logger.warning("Failed to download the page because of other HTTPlib error proxy error {0} trying again.".format(url))
+logger.warning("Failed to download the page because of proxy error {0} trying again.".format(url))
+logger.warning("Failed to download the page because of socket error {0} trying again.".format(url))
+logger.warning("No HTML content for page {url}".format(url=self.archive_url))
+logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_client, total=retries_client, url=url))
+logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+logger.warning("Slow down message received for {url}. Waiting 1 minute".format(url=url))
+logger.warning("Timed out or slow down for {url}. Waiting 1 minute".format(url=url))
+logger.warning(errstr)
