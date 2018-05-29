@@ -112,24 +112,22 @@ class PastieSite(threading.Thread):
         self.seen_pasties = deque('', 1000)  # max number of pasties ids in memory
 
     def run(self):
-        logger.info('Thread for Pastiesite {} started'.format(self.name))
+        logstr = '{site:<15s} | THREAD STARTED'.format(site=self.name)
+        logger.info(logstr)
         while not self.kill_received:
             sleep_time = random.randint(self.update_min, self.update_max)
             try:
                 # grabs site from queue
-                logger.info(
-                    'Downloading list of new pastes from {name}. '
-                    'Will check again in {time} seconds'.format(
-                        name=self.name, time=sleep_time))
+                logstr = '{site:<15s} | {time}s to next recheck | Downloading new paste list'
+                logger.info(logstr.format(site=self.name, time=sleep_time))
                 # get the list of last pasties, but reverse it
                 # so we first have the old entries and then the new ones
                 last_pasties = self.get_last_pasties()
                 if last_pasties:
                     for pastie in reversed(last_pasties):
                         queues[self.name].put(pastie)  # add pastie to queue
-                    logger.info("Found {amount} new pasties for site {site}. There are now {qsize} pasties to be downloaded.".format(amount=len(last_pasties),
-                                                                                                                                     site=self.name,
-                                                                                                                                     qsize=queues[self.name].qsize()))
+                    logstr = '{site:<15s} | {amt:<3d} new pastes | {qsize:<3d} queued pastes'
+                    logger.info(logstr.format(site=self.name, amt=len(last_pasties), qsize=queues[self.name].qsize()))
             # catch unknown errors
             except Exception as e:
                 msg = 'Thread for {name} crashed unexpectectly, '\
@@ -142,7 +140,7 @@ class PastieSite(threading.Thread):
         # reset the pasties list
         pasties = []
         # populate queue with data
-        htmlPage, headers = download_url(self.archive_url)
+        htmlPage, headers = download_url(self.archive_url, self.name)
         if not htmlPage:
             logger.warning("No HTML content for page {url}".format(url=self.archive_url))
             return False
@@ -162,7 +160,8 @@ class PastieSite(threading.Thread):
                     pastie = Pastie(self, pastie_id)
                 pasties.append(pastie)
             return pasties
-        logger.error("No last pasties matches for regular expression site:{site} regex:{regex}. Error in your regex? Dumping htmlPage \n {html}".format(site=self.name, regex=self.archive_regex, html=htmlPage.encode('utf8')))
+        logstr = '{site:<15s} | No paste link matches for your regex: [{regex}]. Dumping page HTML.\n{html}'
+        logger.error(logstr.format(site=self.name, regex=self.archive_regex, html=htmlPage.encode('utf8')))
         return False
 
     def seen_pastie(self, pastie_id):
@@ -238,7 +237,7 @@ class Pastie():
                 logger.error('Pastie {site} {id} md5 problem: {e}'.format(site=self.site.name, id=self.id, e=e))
 
     def fetch_pastie(self):
-        self.pastie_content, headers = download_url(self.url)
+        self.pastie_content, headers = download_url(self.url, self.site.name)
         return self.pastie_content
 
     def save_pastie(self, directory):
@@ -401,7 +400,7 @@ class PastiePasteSiteCom(Pastie):
         Pastie.__init__(self, site, pastie_id)
 
     def fetch_pastie(self):
-        validation_form_page, headers = download_url(self.url)
+        validation_form_page, headers = download_url(self.url, self.site.name)
         if validation_form_page:
             htmlDom = BeautifulSoup(validation_form_page, "html.parser")
             if not htmlDom:
@@ -414,7 +413,7 @@ class PastiePasteSiteCom(Pastie):
             data = urllib.urlencode({'plainConfirm': plain_confirm})
             url = "http://pastesite.com/plain/{id}".format(id=self.id)
             cookie = headers.dict['set-cookie']
-            self.pastie_content, headers = download_url(url, data, cookie)
+            self.pastie_content, headers = download_url(url, self.site.name, data=data, cookie=cookie)
         return self.pastie_content
 
 
@@ -429,7 +428,7 @@ class PastieSlexyOrg(Pastie):
         Pastie.__init__(self, site, pastie_id)
 
     def fetch_pastie(self):
-        validation_form_page, headers = download_url(self.url)
+        validation_form_page, headers = download_url(self.url, self.site.name)
         if validation_form_page:
             htmlDom = BeautifulSoup(validation_form_page, "html.parser")
             if not htmlDom:
@@ -438,7 +437,7 @@ class PastieSlexyOrg(Pastie):
             if not a:
                 return self.pastie_content
             url = "https://slexy.org{}".format(a['href'])
-            self.pastie_content, headers = download_url(url)
+            self.pastie_content, headers = download_url(url, self.site.name)
         return self.pastie_content
 
 
@@ -453,7 +452,7 @@ class PastieCdvLt(Pastie):
         Pastie.__init__(self, site, pastie_id)
 
     def fetch_pastie(self):
-        downloaded_page, headers = download_url(self.url)
+        downloaded_page, headers = download_url(self.url, self.site.name)
         if downloaded_page:
             # convert to json object
             json_pastie = json.loads(downloaded_page)
@@ -474,7 +473,7 @@ class PastieSniptNet(Pastie):
         Pastie.__init__(self, site, pastie_id)
 
     def fetch_pastie(self):
-        downloaded_page, headers = download_url(self.url)
+        downloaded_page, headers = download_url(self.url, self.site.name)
         if downloaded_page:
             htmlDom = BeautifulSoup(downloaded_page, "html.parser")
             # search for <textarea class="raw">
@@ -693,7 +692,7 @@ class NoRedirectHandler(urllib2.HTTPRedirectHandler):
     http_error_301 = http_error_303 = http_error_307 = http_error_302
 
 
-def download_url(url, data=None, cookie=None, loop_client=0, loop_server=0):
+def download_url(url, name, data=None, cookie=None, loop_client=0, loop_server=0):
     # Client errors (40x): if more than 5 recursions, give up on URL (used for the 404 case)
     if loop_client >= retries_client:
         return None, None
@@ -728,41 +727,42 @@ def download_url(url, data=None, cookie=None, loop_client=0, loop_server=0):
         return htmlPage, response.headers
     except urllib2.HTTPError as e:
         failed_proxy(random_proxy)
-        logger.warning("!!Proxy error on {0}.".format(url))
+        logstr = '{site:<15s} | PROXY ERROR'.format(site=name)
+        logger.warning(logstr)
         if 404 == e.code:
             htmlPage = e.read()
             logger.warning("404 from proxy received for {url}. Waiting 1 minute".format(url=url))
             time.sleep(60)
             loop_client += 1
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_client, total=retries_client, url=url))
-            return download_url(url, loop_client=loop_client)
+            return download_url(url, name, loop_client=loop_client)
         if 500 == e.code:
             htmlPage = e.read()
             logger.warning("500 from proxy received for {url}. Waiting 1 minute".format(url=url))
             time.sleep(60)
             loop_server += 1
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
-            return download_url(url, loop_server=loop_server)
+            return download_url(url, name, loop_server=loop_server)
         if 504 == e.code:
             htmlPage = e.read()
             logger.warning("504 from proxy received for {url}. Waiting 1 minute".format(url=url))
             time.sleep(60)
             loop_server += 1
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
-            return download_url(url, loop_server=loop_server)
+            return download_url(url, name, loop_server=loop_server)
         if 502 == e.code:
             htmlPage = e.read()
             logger.warning("502 from proxy received for {url}. Waiting 1 minute".format(url=url))
             time.sleep(60)
             loop_server += 1
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
-            return download_url(url, loop_server=loop_server)
+            return download_url(url, name, loop_server=loop_server)
         if 403 == e.code:
             htmlPage = e.read()
             if 'Please slow down' in htmlPage or 'has temporarily blocked your computer' in htmlPage or 'blocked' in htmlPage:
                 logger.warning("Slow down message received for {url}. Waiting 1 minute".format(url=url))
                 time.sleep(60)
-                return download_url(url)
+                return download_url(url, name)
         logger.warning("ERROR: HTTP Error ##### {e} ######################## {url}".format(e=e, url=url))
         return None, None
     except urllib2.URLError as e:
@@ -772,13 +772,13 @@ def download_url(url, data=None, cookie=None, loop_client=0, loop_server=0):
             logger.warning("Failed to download the page because of proxy error {0} trying again.".format(url))
             loop_server += 1
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
-            return download_url(url, loop_server=loop_server)
+            return download_url(url, name, loop_server=loop_server)
         if 'timed out' in e.reason:
             logger.warning("Timed out or slow down for {url}. Waiting 1 minute".format(url=url))
             loop_server += 1
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
             time.sleep(60)
-            return download_url(url, loop_server=loop_server)
+            return download_url(url, name, loop_server=loop_server)
         return None, None
     except socket.timeout:
         logger.debug("ERROR: timeout ############################# " + url)
@@ -787,7 +787,7 @@ def download_url(url, data=None, cookie=None, loop_client=0, loop_server=0):
             logger.warning("Failed to download the page because of socket error {0} trying again.".format(url))
             loop_server += 1
             logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
-            return download_url(url, loop_server=loop_server)
+            return download_url(url, name, loop_server=loop_server)
         return None, None
     except BadStatusLine:
         failed_proxy(random_proxy)
@@ -796,13 +796,13 @@ def download_url(url, data=None, cookie=None, loop_client=0, loop_server=0):
         logger.warning(errstr)
         loop_server += 1
         logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
-        return download_url(url, loop_server=loop_server)
+        return download_url(url, name, loop_server=loop_server)
     except Exception as e:
         failed_proxy(random_proxy)
         logger.warning("Failed to download the page because of other HTTPlib error proxy error {0} trying again.".format(url))
         loop_server += 1
         logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
-        return download_url(url, loop_server=loop_server)
+        return download_url(url, name, loop_server=loop_server)
         # logger.error("ERROR: Other HTTPlib error: {e}".format(e=e))
         # return None, None
     # do NOT try to download the url again here, as we might end in enless loop
