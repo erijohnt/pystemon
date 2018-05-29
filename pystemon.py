@@ -142,7 +142,8 @@ class PastieSite(threading.Thread):
         # populate queue with data
         htmlPage, headers = download_url(self.archive_url, self.name)
         if not htmlPage:
-            logger.warning("No HTML content for page {url}".format(url=self.archive_url))
+            logstr = '{site:<15s} | No HTML content | url={url}'
+            logger.warning(logstr.format(site=self.name, url=self.archive_url))
             return False
         pasties_ids = re.findall(self.archive_regex, htmlPage)
         if pasties_ids:
@@ -302,9 +303,10 @@ class Pastie():
             self.action_on_match()
 
     def action_on_match(self):
-        msg = 'Found hit for {matches} in pastie {url}'.format(
-            matches=self.matches_to_text(), url=self.public_url)
-        logger.info(msg)
+        logstr = '{site:<15s} | HIT for {matches} | url={url}' 
+        logger.info(logstr.format(site=self.site.name, 
+                                  matches=self.matches_to_text(),
+                                  url=self.public_url))
         # store info in DB
         if db:
             db.queue.put(self)
@@ -729,79 +731,101 @@ def download_url(url, name, data=None, cookie=None, loop_client=0, loop_server=0
         failed_proxy(random_proxy)
         logstr = '{site:<15s} | PROXY ERROR'.format(site=name)
         logger.warning(logstr)
+        logstr = '{site:<15s} | Retrying in 1 minute | '.format(site=name)
+        retrystr = '{site:<15s} | Attempt {nb:<2d}/{total} | url={url}'
         if 404 == e.code:
             htmlPage = e.read()
-            logger.warning("404 from proxy received for {url}. Waiting 1 minute".format(url=url))
+            httpstr = "HTTP 404 : Not Found"
+            logger.warning(logstr + httpstr)
             time.sleep(60)
             loop_client += 1
-            logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_client, total=retries_client, url=url))
+            logger.warning(retrystr.format(site=name, nb=loop_client, total=retries_client, url=url))
             return download_url(url, name, loop_client=loop_client)
         if 500 == e.code:
             htmlPage = e.read()
-            logger.warning("500 from proxy received for {url}. Waiting 1 minute".format(url=url))
+            httpstr = "HTTP 500: Internal Server Error"
+            logger.warning(logstr + httpstr)
             time.sleep(60)
             loop_server += 1
-            logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+            logger.warning(retrystr.format(site=name, nb=loop_server, total=retries_server, url=url))
             return download_url(url, name, loop_server=loop_server)
         if 504 == e.code:
             htmlPage = e.read()
-            logger.warning("504 from proxy received for {url}. Waiting 1 minute".format(url=url))
+            httpstr = "HTTP 504: Gateway Time-Out" 
+            logger.warning(logstr + httpstr)
             time.sleep(60)
             loop_server += 1
-            logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+            logger.warning(retrystr.format(site=name, nb=loop_server, total=retries_server, url=url))
             return download_url(url, name, loop_server=loop_server)
         if 502 == e.code:
             htmlPage = e.read()
-            logger.warning("502 from proxy received for {url}. Waiting 1 minute".format(url=url))
+            httpstr = "HTTP 502: Bad Gateway" 
+            logger.warning(logstr + httpstr)
             time.sleep(60)
             loop_server += 1
-            logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+            logger.warning(retrystr.format(site=name, nb=loop_server, total=retries_server, url=url))
             return download_url(url, name, loop_server=loop_server)
         if 403 == e.code:
             htmlPage = e.read()
+            httpstr = "HTTP 403: Forbidden" 
+            logger.warning(logstr + httpstr)
             if 'Please slow down' in htmlPage or 'has temporarily blocked your computer' in htmlPage or 'blocked' in htmlPage:
                 logger.warning("Slow down message received for {url}. Waiting 1 minute".format(url=url))
                 time.sleep(60)
                 return download_url(url, name)
-        logger.warning("ERROR: HTTP Error ##### {e} ######################## {url}".format(e=e, url=url))
-        return None, None
+            return None, None
+        if 521 == e.code:
+            htmlPage = e.read()
+            httpstr = "HTTP 521: Origin Down"
+            logger.warning(logstr + httpstr)
+            time.sleep(60)
+            loop_server += 1
+            logger.warning(retrystr.format(site=name, nb=loop_server, total=retries_server, url=url))
+            return download_url(url, name, loop_server=loop_server)
+        else:
+            httpstr = "HTTP " + e.code + ": " + e.reason
+            logger.warning(logstr + httpstr)
+            return None, None
     except urllib2.URLError as e:
+        retrystr = '{site:<15s} | Attempt {nb:<2d}/{total} | url={url}'
         logger.debug("ERROR: URL Error ##### {e} ######################## ".format(e=e, url=url))
         if random_proxy:  # remove proxy from the list if needed
             failed_proxy(random_proxy)
             logger.warning("Failed to download the page because of proxy error {0} trying again.".format(url))
             loop_server += 1
-            logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+            logger.warning(retrystr.format(site=name, nb=loop_client, total=retries_client, url=url))
             return download_url(url, name, loop_server=loop_server)
         if 'timed out' in e.reason:
             logger.warning("Timed out or slow down for {url}. Waiting 1 minute".format(url=url))
             loop_server += 1
-            logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+            logger.warning(retrystr.format(site=name, nb=loop_client, total=retries_client, url=url))
             time.sleep(60)
             return download_url(url, name, loop_server=loop_server)
         return None, None
     except socket.timeout:
+        retrystr = '{site:<15s} | Attempt {nb:<2d}/{total} | url={url}'
         logger.debug("ERROR: timeout ############################# " + url)
         if random_proxy:  # remove proxy from the list if needed
             failed_proxy(random_proxy)
             logger.warning("Failed to download the page because of socket error {0} trying again.".format(url))
             loop_server += 1
-            logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+            logger.warning(retrystr.format(site=name, nb=loop_client, total=retries_client, url=url))
             return download_url(url, name, loop_server=loop_server)
         return None, None
     except BadStatusLine:
+        retrystr = '{site:<15s} | Attempt {nb:<2d}/{total} | url={url}'
         failed_proxy(random_proxy)
-        errstr = "Failed to download the page because of bad HTTP status code from " \
-                 + "{0} trying again.".format(url)
-        logger.warning(errstr)
+        errstr = '{site:<15s} | Couldn\'t download page: bad HTTP status' 
+        logger.warning(errstr.format(site=name))
         loop_server += 1
-        logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+        logger.warning(retrystr.format(site=name, nb=loop_client, total=retries_client, url=url))
         return download_url(url, name, loop_server=loop_server)
     except Exception as e:
+        retrystr = '{site:<15s} | Attempt {nb:<2d}/{total} | url={url}'
         failed_proxy(random_proxy)
         logger.warning("Failed to download the page because of other HTTPlib error proxy error {0} trying again.".format(url))
         loop_server += 1
-        logger.warning("Retry {nb}/{total} for {url}".format(nb=loop_server, total=retries_server, url=url))
+        logger.warning(retrystr.format(site=name, nb=loop_client, total=retries_client, url=url))
         return download_url(url, name, loop_server=loop_server)
         # logger.error("ERROR: Other HTTPlib error: {e}".format(e=e))
         # return None, None
